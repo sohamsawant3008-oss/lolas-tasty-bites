@@ -7,8 +7,10 @@ services:
     startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
     envVars:
       - key: SECRET_KEY
-        value: change-this-secret-key
+        sync: false
       - key: ADMIN_PASSWORD
-        value: lolas123
+        sync: false
+      - key: FLASK_ENV
+        value: production
       - key: FLASK_DEBUG
         value: "0"

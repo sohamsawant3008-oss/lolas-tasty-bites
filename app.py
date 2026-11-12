@@ -5,7 +5,12 @@ from pathlib import Path
 
 from flask import Flask, jsonify, render_template, request, session
 
-app = Flask(__name__, static_folder='.', template_folder='.')
+app = Flask(__name__, static_folder='static', template_folder='.')
+if os.environ.get('FLASK_ENV') == 'production':
+    missing_secrets = [name for name in ('SECRET_KEY', 'ADMIN_PASSWORD') if not os.environ.get(name)]
+    if missing_secrets:
+        raise RuntimeError(f"Missing required production environment variables: {', '.join(missing_secrets)}")
+
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'lolas-tasty-bites-secret-key-change-me')
 app.config['SESSION_COOKIE_SECURE'] = os.environ.get('FLASK_ENV') == 'production'
 app.config['SESSION_COOKIE_HTTPONLY'] = True
