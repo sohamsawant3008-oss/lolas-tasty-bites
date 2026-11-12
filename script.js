@@ -193,7 +193,8 @@
         ad = $('fa').value.trim(),
         nt = $('fo').value.trim(),
         utr = $('utr').value.trim(),
-        er = $('er');
+        er = $('er'),
+        submitButton = $('sb');
     var pay = document.querySelector('input[name=pay]:checked').value;
 
     if (!cart.length) return;
@@ -211,6 +212,8 @@
     }
 
     er.textContent = '';
+    submitButton.disabled = true;
+    submitButton.textContent = 'Saving order...';
     var t = 0,
         l = cart.map(function (c) {
           t += c.price * c.q;
@@ -248,41 +251,25 @@
     } catch (err) {
       console.error('Backend save failed:', err);
       er.textContent = 'Order could not be saved online. Please try again or contact support.';
+      submitButton.disabled = false;
+      submitButton.textContent = 'Place order on WhatsApp';
       return;
     }
 
     var msg = 'Hello Lolas_tasty_bites! I would like to place an order:\n\n' +
               l.join('\n') +
               '\n\nTotal: ₹' + t +
+              '\nOrder ID: ' + result.order_id +
               '\nName: ' + n +
               '\nPhone: ' + ph +
               '\n' + m + (m === 'Delivery' ? ' address: ' + ad : '') +
               '\nPayment: ' + pay +
-              (pay.indexOf('Google Pay') === 0 && utr ? '\nUPI Transaction ID: ' + utr : '') +
+              (pay.indexOf('Google Pay') === 0 && utr ? '\nUPI payment reference / UTR: ' + utr : '') +
               (nt ? '\nNote: ' + nt : '');
 
     var url = 'https://wa.me/' + PHONE + '?text=' + encodeURIComponent(msg);
-    $('wl').href = url;
-    $('wa2').href = 'whatsapp://send?phone=' + PHONE + '&text=' + encodeURIComponent(msg);
-    $('mt').value = msg;
-    $('wb').style.display = 'block';
-    $('cp').click();
-  });
-
-  $('cp').addEventListener('click', function () {
-    var t = $('mt');
-    t.select();
-    t.setSelectionRange(0, 99999);
-    try {
-      if (navigator.clipboard) {
-        navigator.clipboard.writeText(t.value);
-      } else {
-        document.execCommand('copy');
-      }
-    } catch (e) {
-      try { document.execCommand('copy'); } catch (x) {}
-    }
-    toast('Order copied!');
+    er.textContent = 'Order saved. Opening WhatsApp...';
+    window.location.assign(url);
   });
 
   // 6. Menu Tabs & Scroll Reveal
