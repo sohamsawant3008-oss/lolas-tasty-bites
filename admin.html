@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lolas Tasty Bites | Admin Orders</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f9f1ea;
+      color: #3a1f14;
+    }
+    .wrap {
+      max-width: 1200px;
+      margin: 40px auto;
+      padding: 20px;
+    }
+    h1 {
+      margin-bottom: 20px;
+      font-size: 2rem;
+    }
+    .login {
+      background: #fffaf4;
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 10px 28px rgba(58, 31, 20, 0.08);
+      margin-bottom: 20px;
+      max-width: 420px;
+    }
+    .login input, .login button, select {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      border-radius: 10px;
+      border: 1px solid #d9b98a;
+      font-size: 1rem;
+    }
+    .login button, .status-btn {
+      background: #3a1f14;
+      color: white;
+      border: 0;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .card {
+      background: #fffaf4;
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 10px 28px rgba(58, 31, 20, 0.08);
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 900px;
+    }
+    th, td {
+      border-bottom: 1px solid #e8d7c4;
+      padding: 12px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background: #f1e1d0;
+    }
+    .empty {
+      color: #7a5848;
+      padding: 18px 0;
+    }
+    .back {
+      display: inline-block;
+      margin-bottom: 20px;
+      text-decoration: none;
+      color: #3a1f14;
+      font-weight: 600;
+    }
+    .hidden {
+      display: none;
+    }
+    .logout-btn {
+      margin-bottom: 18px;
+      background: #c0576b;
+      color: white;
+      border: 0;
+      padding: 10px 18px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <a class="back" href="/">← Back to website</a>
+    <h1>Order Dashboard</h1>
+
+    <div id="loginBox" class="login">
+      <label for="adminPassword">Admin password</label>
+      <input id="adminPassword" type="password" placeholder="Enter admin password" />
+      <button id="loginBtn">Login</button>
+    </div>
+
+    <div id="ordersSection" class="hidden">
+      <button id="logoutBtn" class="logout-btn">Logout</button>
+      <div class="card">
+        <div id="ordersContainer"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const adminPassword = 'lolas123';
+    const ordersSection = document.getElementById('ordersSection');
+    const loginBox = document.getElementById('loginBox');
+    const ordersContainer = document.getElementById('ordersContainer');
+
+    async function login() {
+      const entered = document.getElementById('adminPassword').value;
+      try {
+        const response = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: entered })
+        });
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || 'Login failed');
+        }
+
+        loginBox.classList.add('hidden');
+        ordersSection.classList.remove('hidden');
+        loadOrders();
+      } catch (error) {
+        alert('Incorrect password');
+      }
+    }
+
+    async function logout() {
+      await fetch('/api/admin/logout', { method: 'POST' });
+      ordersSection.classList.add('hidden');
+      loginBox.classList.remove('hidden');
+      document.getElementById('adminPassword').value = '';
+    }
+
+    document.getElementById('loginBtn').addEventListener('click', login);
+    document.getElementById('logoutBtn').addEventListener('click', logout);
+
+    async function loadOrders() {
+      try {
+        const response = await fetch('/api/orders');
+        const orders = await response.json();
+
+        if (!orders.length) {
+          ordersContainer.innerHTML = '<div class="empty">No orders placed yet.</div>';
+          return;
+        }
+
+        ordersContainer.innerHTML = `
+          <table>
+            <thead>
+              <tr>
+                <th>Order ID</th>
+                <th>Name</th>
+                <th>Phone</th>
+                <th>Mode</th>
+                <th>Address</th>
+                <th>Items</th>
+                <th>Total</th>
+                <th>Payment</th>
+                <th>UTR</th>
+                <th>Status</th>
+                <th>Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${orders.map(order => {
+                const items = (order.items || []).map(item => `${item.name} × ${item.qty}`).join('<br>');
+                return `
+                  <tr>
+                    <td>#${order.id}</td>
+                    <td>${order.name}</td>
+                    <td>${order.phone}</td>
+                    <td>${order.delivery_mode}</td>
+                    <td>${order.address || '-'}</td>
+                    <td>${items || '-'}</td>
+                    <td>₹${order.total}</td>
+                    <td>${order.payment}</td>
+                    <td>${order.utr || '-'}</td>
+                    <td>
+                      <select data-order-id="${order.id}">
+                        ${['Pending','Confirmed','Packed','Out for Delivery','Delivered'].map(status => `
+                          <option value="${status}" ${status === order.status ? 'selected' : ''}>${status}</option>
+                        `).join('')}
+                      </select>
+                    </td>
+                    <td>${order.created_at}</td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        `;
+
+        document.querySelectorAll('select[data-order-id]').forEach(select => {
+          select.addEventListener('change', async function () {
+            const orderId = this.dataset.orderId;
+            const status = this.value;
+            try {
+              const response = await fetch(`/api/admin/orders/${orderId}/status`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status })
+              });
+              const result = await response.json();
+              if (!response.ok) throw new Error(result.error || 'Failed');
+              alert(`Order #${orderId} marked as ${status}`);
+            } catch (error) {
+              alert('Unable to update order status');
+            }
+          });
+        });
+      } catch (error) {
+        ordersContainer.innerHTML = '<div class="empty">Unable to load orders right now.</div>';
+      }
+    }
+
+    setInterval(loadOrders, 5000);
+  </script>
+</body>
+</html>
